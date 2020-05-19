@@ -35,13 +35,13 @@ async function datdotChain () {
 
   return chainAPI
 
-  function getNonce(account) {
-		const {name} = account
-		let nonce = (nonces[name] || 0)
-		nonce++
-		nonces[name] = nonce
+  function getNonce (account) {
+    const { name } = account
+    let nonce = (nonces[name] || 0)
+    nonce++
+    nonces[name] = nonce
 
-		return nonce - 1
+    return nonce - 1
   }
 
   // PUBLISH DATA

@@ -68,8 +68,8 @@ async function start (chainAPI, serviceAPI, accounts) {
   ----------------------------------------- */
   // 1. `register HOSTER`
   async function registerHoster () {
-    for(let account of accounts) {
-	    await chainAPI.registerHoster({account})
+    for (const account of accounts) {
+	    await chainAPI.registerHoster({ account })
     }
   }
 
