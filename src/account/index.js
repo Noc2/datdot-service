@@ -12,11 +12,11 @@ const memdown = require('memdown')
 const { Keyring } = require('@polkadot/api')
 const keyring = new Keyring({ type: 'sr25519' })
 
-const DEFAULT_SDK_APPLICATION = 'datdot-node'
-const NAMESPACE = 'datdot-node'
+const DEFAULT_SDK_APPLICATION = 'datdot-account'
+const NAMESPACE = 'datdot-account'
 const IDENTITY_NAME = 'identity'
 
-module.exports = class Node {
+module.exports = class Account {
   constructor ({ sdk, EncoderDecoder, application, persist }) {
     const { Hypercore, Hyperdrive } = sdk
 
@@ -27,13 +27,15 @@ module.exports = class Node {
     this.application = application
     this.storageLocation = envPaths(application).data
     this.persist = persist
+		this.application = application
+
+    this.nonce = 0
 
     this.hoster = null
     this.encoder = null
     this.attestor = null
     this.sdkIdentity = null
     this.chainKeypair = null
-    this.nonce = 0
   }
 
   async init () {
@@ -108,6 +110,15 @@ module.exports = class Node {
 
   get replicationIdentity () {
     return this.sdkIdentity.publicKey
+  }
+
+  get name () {
+		if(!this.application) return DEFAULT_SDK_APPLICATION
+		return this.application.replace('datdot-account-', '')
+  }
+
+  get address() {
+		return this.chainKeypair.address
   }
 
   async attest (feedKey, index) {

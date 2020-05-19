@@ -1,13 +1,9 @@
-const { Keyring } = require('@polkadot/api')
-const keyring = new Keyring({ type: 'sr25519' })
-const hypercoreArr_promise = require('../../src/temp_helpers/getHypercoreArr')
+const Account = require('../../src/account')
+const ACCOUNTS = require('./accounts.json')
+
 const getChainAPI = require('../../src/temp_helpers/chainAPI-mvp') // to use substrate node
-const colors = require('colors/safe')
-const NAME = __filename.split('/').pop().split('.')[0].toUpperCase()
-function LOG (...msgs) {
-  msgs = [`[${NAME}] `, ...msgs].map(msg => colors.green(msg))
-  console.log(...msgs)
-}
+
+const LOG = requiire('debug')(NAME)
 
 /*
 Scenario:
@@ -29,40 +25,58 @@ Behavior:
 async function setup () {
   const chainAPI = await getChainAPI()
   const serviceAPI = {}
-  const names = ['//Alice', '//Charlie', '//Ferdie', '//Eve', '//Dave']
-  const accounts = []
-  for (var i = 0; i < names.length; i++) {
-    const name = names[i]
-    const account = makeAccount(name)
-    accounts.push(account)
-    account.name = name.split('//')[1]
-    LOG(name, account.address)
-  }
-  if (names.length === accounts.length) start(chainAPI, serviceAPI, accounts)
+  const accounts = {}
+
+	for(let name in ACCOUNTS) {
+		const account = await makeAccount(name)
+		accounts[name] = account
+	}
+
+  start(chainAPI, serviceAPI, accounts)
 }
 setup()
 
 // 2. `make ACCOUNT`
-function makeAccount (name) {
-  return keyring.addFromUri(name)
+async function makeAccount (name) {
+	return Account.load({
+		persist: false,
+		application: `datdot-account-${name}`
+	})
 }
 
 async function start (chainAPI, serviceAPI, accounts) {
+	// Iterate through accounts and perform their roles
+	const publishedKeys = []
+
+  publishData()
+  chainAPI.listenToEvents(handleEvent)
+
+
   /* --------------------------------------
             B. COMMIT FLOW
   ----------------------------------------- */
   // 1. `publish DATA`
   async function publishData () {
-    const hypercoreArr = (await hypercoreArr_promise)[0]
+		for(let name in accounts) {
+			const account = accounts[name]
+			const opts = ACCOUNTS[name]
+			if(!opts.publisher) continue
+
+			// Get a hypercore for this account
+			const core = account.Hypercore('Datdot MVP')
+			await core.ready()
+
+			if(!core.length) await core.append('Hello World!')
+
+			
     const opts = {
       registerPayload: hypercoreArr,
-      account: accounts[0]
+      account
     }
     await chainAPI.publishData(opts)
-  }
-  publishData()
-  chainAPI.listenToEvents(handleEvent)
+		}
 
+  }
   /* --------------------------------------
         C. REGISTERING FLOW
   ----------------------------------------- */

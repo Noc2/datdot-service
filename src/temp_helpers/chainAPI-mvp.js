@@ -35,37 +35,25 @@ async function datdotChain () {
 
   return chainAPI
 
-  function getNonce (account) {
-    const { name } = account
-    let nonce = (nonces[name] || 0)
-    nonce++
-    nonces[name] = nonce
-
-    return nonce - 1
-  }
-
   // PUBLISH DATA
   async function publishData ({ registerPayload, account }) {
     const registerData = await API.tx.datVerify.registerData(registerPayload)
-    const nonce = await getNonce(account)
-    LOG(`Publishing data: ${account.name} ${nonce}`)
-    await registerData.signAndSend(account, { nonce })
+    LOG(`Publishing data: ${account.name}`)
+    await registerData.signAndSend(account)
   }
 
   // REGISTER HOSTER
   async function registerHoster ({ account }) {
     const register = await API.tx.datVerify.registerSeeder()
-    const nonce = await getNonce(account)
-    LOG(`Registering hoster: ${account.name} ${nonce}`)
-    await register.signAndSend(account, { nonce })
+    LOG(`Registering hoster: ${account.name}`)
+    await account.signAndSend(register)
   }
 
   // REGISTER ATTESTOR
   async function registerAttestor ({ account }) {
     const register = await API.tx.datVerify.registerAttestor()
-    const nonce = await getNonce(account)
-    LOG(`Registering attestor: ${account.name} ${nonce}`)
-    await register.signAndSend(account, { nonce })
+    LOG(`Registering attestor: ${account.name}`)
+    await account.signAndSend(register)
   }
 
   // REQUEST A CHALLENGE

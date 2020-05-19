@@ -1,4 +1,4 @@
-# Node
+# Account
 
 This module abstracts interaction with Dat and p2plex and makes it easy to initialize various functions.
 
