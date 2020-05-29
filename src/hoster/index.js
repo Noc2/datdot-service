@@ -9,7 +9,6 @@ const { seedKeygen } = require('noise-peer')
 
 const HosterStorage = require('../hoster-storage')
 
-const { ENCODING_RESULTS_STREAM } = require('../constants')
 const NAMESPACE = 'datdot-hoster'
 const NOISE_NAME = 'noise'
 const ALL_KEYS_KEY = 'all_keys'
@@ -17,13 +16,13 @@ const DEFAULT_OPTS = {
   ranges: [{ start: 0, end: Infinity }],
   watch: true
 }
+const ANNOUNCE = { announce: true, lookup: false }
 
 module.exports = class Hoster {
   constructor ({
     db,
     sdk,
-    EncoderDecoder,
-    onNeedsEncoding
+    EncoderDecoder
   }) {
     this.storages = new Map()
     this.keyOptions = new Map()
@@ -37,22 +36,26 @@ module.exports = class Hoster {
     this.sdk = sdk
     this.Hypercore = Hypercore
     this.EncoderDecoder = EncoderDecoder
-    this.onNeedsEncoding = onNeedsEncoding
   }
 
-  async addFeed (key, opts) {
+  async addFeed (key, encoderKey, opts) {
     await this.setOpts(key, opts)
     await this.addKey(key, opts)
     await this.loadFeedData(key)
+    await this.listenEncoder(encoderKey, key)
   }
 
-  // TODO: Should we verify that the peer can be trusted?
-  async onConnection (peer) {
+  async listenEncoder (encoderKey, key) {
+    // TODO: Derive key by combining our public keys and feed key
+    const topic = key
+
+    const peer = await this.communication.findByTopicAndPublicKey(topic, encoderKey, ANNOUNCE)
+
     const resultStream = new PassThrough({ objectMode: true })
     const rawResultStream = ndjson.parse()
     const confirmStream = ndjson.serialize()
 
-    const encodingStream = peer.receiveStream(ENCODING_RESULTS_STREAM)
+    const encodingStream = peer.receiveStream(topic)
 
     pump(confirmStream, encodingStream, rawResultStream, resultStream)
 
@@ -86,6 +89,8 @@ module.exports = class Hoster {
             type: 'encoded:stored',
             ok: true
           })
+
+          this.emit('encoded', key, index)
         } catch (e) {
           // Uncomment for better stack traces
           // console.error(e)
@@ -97,13 +102,11 @@ module.exports = class Hoster {
     }
 
     function sendError (message, details = {}) {
-      confirmStream.write({
+      confirmStream.end({
         type: 'encoded:error',
         error: message,
         ...details
       })
-
-      peer.close()
     }
   }
 
@@ -148,13 +151,13 @@ module.exports = class Hoster {
 
       const { length } = feed
 
-      for (const { start, end } of ranges) {
-        const actualEnd = Math.min(end, length)
-        for (let i = start; i < actualEnd; i++) {
-          if (feed.has(i)) continue
+      for (const { start, wantedEnd } of ranges) {
+        const end = Math.min(wantedEnd, length)
 
-          await this.onNeedsEncoding(key, i)
-        }
+        feed.download({
+          start,
+          end
+        })
       }
 
       if (watch) this.watchFeed(feed)
@@ -168,7 +171,8 @@ module.exports = class Hoster {
   }
 
   async watchFeed (feed) {
-    const stringKey = feed.key.toString('hex')
+    console.warn('Watching is not supported since we cannot ask the chain for encoders')
+    /* const stringKey = feed.key.toString('hex')
     if (this.watchingFeeds.has(stringKey)) return
     this.watchingFeeds.add(stringKey)
 
@@ -176,7 +180,7 @@ module.exports = class Hoster {
 
     async function onUpdate () {
       await this.loadFeedData(feed.key)
-    }
+    } */
   }
 
   async storeEncoded (key, index, proof, encoded, nodes, signature) {
@@ -265,7 +269,6 @@ module.exports = class Hoster {
     this.publicKey = noiseKeyPair.publicKey
 
     this.communication = p2plex({ keyPair: noiseKeyPair })
-    this.communication.on('connection', (peer) => this.onConnection(peer))
 
     const keys = await this.listKeys()
 
