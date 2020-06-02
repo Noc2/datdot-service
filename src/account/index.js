@@ -129,8 +129,8 @@ module.exports = class Account {
     return this.encoder.encodeFor(hosterIdentity, feedKey, ranges)
   }
 
-  async hostFeed (feedKey, plan) {
-    return this.hoster.addFeed(feedKey, plan)
+  async hostFeed (feedKey, encoderIdentity plan) {
+    return this.hoster.addFeed(feedKey, encoderIdentity, plan)
   }
 
   async stopHostingFeed (feedKey) {
