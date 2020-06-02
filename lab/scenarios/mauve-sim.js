@@ -31,12 +31,11 @@ class FakeBlockchain {
 
   async requestHosting (feed, plan) {
     console.log('Publisher requested hosting for', feed, plan)
-    await this.hoster.addFeed(feed, plan)
-  }
-
-  async requestEncoding (hoster, feed, ranges) {
-    console.log('Hoster requested encoding for', feed, ranges)
-    await this.encoder.encodeFor(hoster, feed, ranges)
+    console.log('Pairing hoster and encoder', this.hoster.publicKey, this.encoder.publicKey)
+    await Promise.all([
+      this.hoster.addFeed(feed, this.encoder.publicKey, plan),
+      await this.encoder.encodeFor(this.hoster.publicKey, feed, plan)
+    ])
   }
 }
 
@@ -56,8 +55,7 @@ async function run () {
   const hoster = await Hoster.load({
     EncoderDecoder,
     db: hosterDB,
-    sdk: hosterSDK,
-    onNeedsEncoding: async (key, ranges) => chain.requestEncoding(hoster.publicKey, key, ranges)
+    sdk: hosterSDK
   })
 
   chain.init(hoster, encoder)
