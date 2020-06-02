@@ -39,7 +39,7 @@ async function datdotChain () {
   async function publishData ({ registerPayload, account }) {
     const registerData = await API.tx.datVerify.registerData(registerPayload)
     LOG(`Publishing data: ${account.name}`)
-    await registerData.signAndSend(account)
+    await account.signAndSend(registerData)
   }
 
   // REGISTER HOSTER

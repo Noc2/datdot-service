@@ -50,15 +50,17 @@ module.exports = class HosterStorage {
 
   // Invoked by whoever to test that the hoster is actually hosting stuff
   async getProofOfStorage (index) {
-    const [encoded, proof] = await Promise.all([
+    const [encoded, proof, merkleProof] = await Promise.all([
       this._getEncoded(index),
-      this._getProof(index)
+      this._getProof(index),
+      this._getNodes(index)
     ])
 
     return {
       index,
       encoded,
-      proof
+      proof,
+      merkleProof
     }
   }
 
@@ -95,6 +97,11 @@ module.exports = class HosterStorage {
       // We don't have the encoded version so we should store the decoded version
       await this._putDecoded(index, data)
     }).then(() => cb(null), (err) => cb(err))
+  }
+
+  async _getNodes (index) {
+    const { nodes } = await this.feed.proof(index)
+    return nodes
   }
 
   async _getEncoded (index) {

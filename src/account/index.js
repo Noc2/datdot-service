@@ -138,7 +138,7 @@ module.exports = class Account {
   }
 
   async getHostingProof (feedKey, index) {
-    const { encoded, proof } = await this.hoster.getProofOfStorage(feedKey, index)
+    const { encoded, proof, merkleProof } = await this.hoster.getProofOfStorage(feedKey, index)
 
     return { index, encoded, proof, feed: feedKey }
   }
